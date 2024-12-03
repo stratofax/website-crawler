@@ -2,7 +2,7 @@
 name = "website-crawler"
 version = "0.1.0"
 description = "A Python-based website crawler that generates CSV reports"
-authors = ["Your Name <your.email@example.com>"]
+authors = ["Neil Johnson <neil@cadent.com>"]
 readme = "README.md"
 packages = [{include = "crawler.py"}]
 

@@ -37,4 +37,4 @@ poetry.lock
 *.swo
 
 # Project specific
-results.csv
+.csv
