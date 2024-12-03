@@ -21,30 +21,27 @@ class WebsiteCrawler:
             'User-Agent': 'Mozilla/5.0 (compatible; PythonWebCrawler/1.0)'
         })
 
+    def clean_url(self, url: str) -> str:
+        """Clean the URL by removing fragments and query parameters."""
+        parsed_url = urlparse(url)
+        # Remove both fragment (#) and query parameters (?)
+        clean_url = f"{parsed_url.scheme}://{parsed_url.netloc}{parsed_url.path}"
+        return clean_url
+
     def is_valid_url(self, url: str) -> bool:
         """Check if the URL belongs to the target domain."""
         parsed_url = urlparse(url)
-        # Remove the fragment (#) part of the URL
-        clean_url = f"{parsed_url.scheme}://{parsed_url.netloc}{parsed_url.path}"
-        if parsed_url.query:
-            clean_url += f"?{parsed_url.query}"
-        
-        # Store the clean URL for future comparisons
-        url = clean_url
         return parsed_url.netloc == self.domain
 
     def crawl_page(self, url: str) -> None:
         """Crawl a single page and extract links."""
         # Clean the URL before checking if visited
-        parsed_url = urlparse(url)
-        clean_url = f"{parsed_url.scheme}://{parsed_url.netloc}{parsed_url.path}"
-        if parsed_url.query:
-            clean_url += f"?{parsed_url.query}"
+        clean_url = self.clean_url(url)
         if clean_url in self.visited_urls:
             return
 
         self.visited_urls.add(clean_url)
-        print(f"Crawling: {url}")
+        print(f"Crawling: {clean_url}")
 
         try:
             response = self.session.get(url, timeout=10)
@@ -58,18 +55,16 @@ class WebsiteCrawler:
                 # Find all links on the page
                 for link in soup.find_all('a', href=True):
                     next_url = urljoin(url, link['href'])
-                    parsed_next_url = urlparse(next_url)
-                    clean_next_url = f"{parsed_next_url.scheme}://{parsed_next_url.netloc}{parsed_next_url.path}"
-                    if parsed_next_url.query:
-                        clean_next_url += f"?{parsed_next_url.query}"
-                    if self.is_valid_url(next_url) and clean_next_url not in self.visited_urls:
-                        self.crawl_page(next_url)
+                    if self.is_valid_url(next_url):
+                        clean_next_url = self.clean_url(next_url)
+                        if clean_next_url not in self.visited_urls:
+                            self.crawl_page(next_url)
             
-            self.results.append((url, title, status_code))
+            self.results.append((clean_url, title, status_code))
 
         except Exception as e:
-            print(f"Error crawling {url}: {str(e)}")
-            self.results.append((url, "Error", 0))
+            print(f"Error crawling {clean_url}: {str(e)}")
+            self.results.append((clean_url, "Error", 0))
 
         # Be polite and don't hammer the server
         time.sleep(1)
