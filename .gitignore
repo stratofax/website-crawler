@@ -38,3 +38,7 @@ poetry.lock
 
 # Project specific
 *.csv
+
+# Coverage reports
+.coverage
+htmlcov/
