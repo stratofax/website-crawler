@@ -29,3 +29,8 @@ poetry run python crawler.py [domain] [output_file]
 Example:
 ```bash
 poetry run python crawler.py www.example.com results.csv
+```
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
