@@ -28,9 +28,13 @@ class WebsiteCrawler:
         return clean_url
 
     def is_valid_url(self, url: str) -> bool:
-        """Check if the URL belongs to the target domain."""
-        parsed_url = urlparse(url)
-        return parsed_url.netloc == self.domain
+        """Check if the URL belongs to the target domain and uses a valid protocol."""
+        try:
+            parsed_url = urlparse(url)
+            return (parsed_url.netloc == self.domain and 
+                   parsed_url.scheme in ('http', 'https'))
+        except Exception:
+            return False
 
     def crawl_page(self, url: str) -> None:
         """Crawl a single page and extract links."""
