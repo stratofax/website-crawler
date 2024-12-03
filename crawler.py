@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
 from typing import Set, List, Tuple
 import time
+from datetime import datetime
 
 class WebsiteCrawler:
     def __init__(self, domain: str):
@@ -81,13 +82,15 @@ class WebsiteCrawler:
             writer.writerows(self.results)
 
 def main():
-    if len(sys.argv) != 3:
-        print("Usage: python crawler.py domain output_file")
-        print("Example: python crawler.py www.example.com results.csv")
+    if len(sys.argv) != 2:
+        print("Usage: python crawler.py domain")
+        print("Example: python crawler.py www.example.com")
         sys.exit(1)
 
     domain = sys.argv[1]
-    output_file = sys.argv[2]
+    # Generate filename with domain and timestamp
+    timestamp = datetime.now().strftime("%Y-%m-%dT%H%M")
+    output_file = f"{domain}_{timestamp}.csv"
 
     crawler = WebsiteCrawler(domain)
     crawler.crawl_page(crawler.base_url)

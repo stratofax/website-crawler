@@ -5,6 +5,8 @@ A Python-based website crawler that recursively visits all pages within a specif
 - Page Title
 - HTTP Status Code
 
+The output file is automatically named using the domain and current timestamp (e.g., `www.example.com_2024-01-23T1430.csv`).
+
 ## Requirements
 - Python 3.8 or higher
 - Poetry (dependency management)
@@ -23,13 +25,15 @@ poetry install
 ## Usage
 Run the crawler with:
 ```bash
-poetry run python crawler.py [domain] [output_file]
+poetry run python crawler.py [domain]
 ```
 
 Example:
 ```bash
-poetry run python crawler.py www.example.com results.csv
+poetry run python crawler.py www.example.com
 ```
+
+This will create a CSV file named with the domain and current timestamp (e.g., `www.example.com_2024-01-23T1430.csv`).
 
 ## License
 
