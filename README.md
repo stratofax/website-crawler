@@ -8,7 +8,7 @@ A Python-based website crawler that recursively visits all pages within a specif
 The output file is automatically named using the domain and current timestamp (e.g., `www.example.com_2024-01-23T1430.csv`).
 
 ## Requirements
-- Python 3.8 or higher
+- Python 3.9 or higher
 - Poetry (dependency management)
 
 ## Setup
@@ -23,17 +23,33 @@ poetry install
 ```
 
 ## Usage
-Run the crawler with:
 ```bash
-poetry run python crawler.py [domain]
+poetry run python src/crawler.py [-h] [-e] [-v] domain
 ```
 
-Example:
+### Arguments
+
+- `domain`: Domain to crawl (e.g., example.com)
+
+### Options
+
+- `-h, --help`: Show help message and exit
+- `-e, --external-links`: Check for external links on the domain. This will recursively crawl all internal pages and collect links to external domains.
+- `-v, --verbose`: Enable verbose output. Shows detailed debugging information during crawling.
+
+### Examples
+
+Basic crawl of a domain:
 ```bash
-poetry run python crawler.py www.example.com
+poetry run python src/crawler.py example.com
 ```
 
-This will create a CSV file named with the domain and current timestamp (e.g., `www.example.com_2024-01-23T1430.csv`).
+Collect external links with verbose output:
+```bash
+poetry run python src/crawler.py example.com -e -v
+```
+
+The output file is automatically named using the domain and current timestamp (e.g., `example.com_2024-01-23T1430.csv`).
 
 ## License
 

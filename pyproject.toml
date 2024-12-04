@@ -4,13 +4,18 @@ version = "0.1.0"
 description = "A Python-based website crawler that generates CSV reports"
 authors = ["Neil Johnson <neil@cadent.com>"]
 readme = "README.md"
-packages = [{include = "crawler.py"}]
+packages = [{include = "src"}]
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.9"
 requests = "^2.32.3"
 beautifulsoup4 = "^4.12.3"
 urllib3 = "^2.2.3"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.4"
+pytest-cov = "^6.0.0"
+responses = "^0.25.3"
 
 [build-system]
 requires = ["poetry-core"]
