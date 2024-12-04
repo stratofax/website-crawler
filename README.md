@@ -8,7 +8,7 @@ A Python-based website crawler that recursively visits all pages within a specif
 The output file is automatically named using the domain and current timestamp (e.g., `www.example.com_2024-01-23T1430.csv`).
 
 ## Requirements
-- Python 3.8 or higher
+- Python 3.9 or higher
 - Poetry (dependency management)
 
 ## Setup
