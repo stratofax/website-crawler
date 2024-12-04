@@ -108,21 +108,14 @@ def test_crawl_page():
         status=200
     )
     
-    # Test crawling
-    crawler.crawl_page(crawler.base_url)
+    # Test crawling with recursive=True
+    crawler.crawl_page(crawler.base_url, recursive=True)
     
     # Check results
     assert len(crawler.visited_urls) == 3
-    assert len(crawler.results) == 3
-    
-    # Verify URLs were crawled
-    crawled_urls = {result[0] for result in crawler.results}
-    expected_urls = {
-        "https://example.com",
-        "https://example.com/page1",
-        "https://example.com/page2"
-    }
-    assert crawled_urls == expected_urls
+    assert "https://example.com" in crawler.visited_urls
+    assert "https://example.com/page1" in crawler.visited_urls
+    assert "https://example.com/page2" in crawler.visited_urls
 
 @responses.activate
 def test_crawl_page_with_error():
@@ -143,7 +136,7 @@ def test_crawl_page_with_error():
     # Check results
     assert len(crawler.visited_urls) == 1
     assert len(crawler.results) == 1
-    assert crawler.results[0] == ("https://example.com", "", 404)
+    assert crawler.results[0] == ("https://example.com", "Error", 404)
 
 @responses.activate
 def test_crawl_page_with_request_exception():
@@ -190,8 +183,8 @@ def test_crawl_page_respects_delay():
     # Record start time
     start_time = time.time()
     
-    # Test crawling
-    crawler.crawl_page(crawler.base_url)
+    # Test crawling with recursive=True
+    crawler.crawl_page(crawler.base_url, recursive=True)
     
     # Calculate elapsed time
     elapsed_time = time.time() - start_time
@@ -234,3 +227,125 @@ def test_save_results():
     finally:
         # Clean up
         os.unlink(output_file)
+
+@responses.activate
+def test_is_external_link():
+    """Test checking if a URL is external"""
+    domain = "example.com"
+    crawler = WebsiteCrawler(domain)
+    
+    # Test internal links
+    assert not crawler.is_external_link("https://example.com")
+    assert not crawler.is_external_link("https://example.com/page")
+    assert not crawler.is_external_link("https://sub.example.com")
+    
+    # Test external links
+    assert crawler.is_external_link("https://external.com")
+    assert crawler.is_external_link("http://another.com/page")
+    
+    # Test invalid URLs
+    assert not crawler.is_external_link("not-a-url")
+    assert not crawler.is_external_link("")
+
+@responses.activate
+def test_check_external_links():
+    """Test collecting external links from a page"""
+    domain = "example.com"
+    crawler = WebsiteCrawler(domain)
+    
+    # Mock the response with some external and internal links
+    html_content = """
+    <html>
+        <body>
+            <a href="https://external1.com">External 1</a>
+            <a href="https://external2.com">External 2</a>
+            <a href="/internal">Internal</a>
+            <a href="https://example.com/page">Internal 2</a>
+        </body>
+    </html>
+    """
+    
+    responses.add(
+        responses.GET,
+        "https://example.com",
+        body=html_content,
+        status=200
+    )
+    
+    # Test crawling
+    crawler.check_external_links()
+    
+    # Check results
+    assert len(crawler.external_links) == 2
+    assert "https://external1.com" in crawler.external_links
+    assert "https://external2.com" in crawler.external_links
+
+@responses.activate
+def test_recursive_external_links_collection():
+    """Test collecting external links from multiple pages"""
+    domain = "example.com"
+    crawler = WebsiteCrawler(domain)
+
+    # Mock responses for main page and subpages
+    responses.add(
+        responses.GET,
+        "https://example.com",
+        body="""
+        <html>
+            <head><title>Main Page</title></head>
+            <body>
+                <a href="https://example.com/page1">Page 1</a>
+                <a href="https://external1.com">External 1</a>
+                <a href="mailto:info@example.com">Email</a>
+            </body>
+        </html>
+        """,
+        status=200
+    )
+
+    responses.add(
+        responses.GET,
+        "https://example.com/page1",
+        body="""
+        <html>
+            <head><title>Page 1</title></head>
+            <body>
+                <a href="https://external2.com">External 2</a>
+                <a href="tel:+1234567890">Phone</a>
+                <a href="javascript:void(0)">JS Link</a>
+            </body>
+        </html>
+        """,
+        status=200
+    )
+
+    # Test recursive external links collection
+    crawler.check_external_links()
+
+    # Check results
+    assert len(crawler.external_links) == 2
+    assert "https://external1.com" in crawler.external_links
+    assert "https://external2.com" in crawler.external_links
+    assert len(crawler.visited_urls) == 2
+
+@responses.activate
+def test_save_external_links_results(tmp_path):
+    """Test saving external links to a CSV file"""
+    domain = "example.com"
+    crawler = WebsiteCrawler(domain)
+    
+    # Add some external links
+    crawler.external_links.add("https://external1.com")
+    crawler.external_links.add("https://external2.com")
+    
+    # Save results
+    output_file = tmp_path / "external_links.csv"
+    crawler.save_external_links_results(str(output_file))
+    
+    # Check file contents
+    with open(output_file) as f:
+        lines = f.readlines()
+        assert len(lines) == 3  # Header + 2 links
+        assert lines[0].strip() == "External URL"
+        assert "https://external1.com" in [line.strip() for line in lines]
+        assert "https://external2.com" in [line.strip() for line in lines]

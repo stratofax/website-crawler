@@ -4,20 +4,18 @@ from unittest.mock import patch, MagicMock
 from datetime import datetime
 from src.crawler import main
 import os
+import argparse
 
 def test_main_with_no_arguments(capsys):
     """Test main function with no command line arguments"""
     # Simulate no command line arguments
     with patch.object(sys, 'argv', ['crawler.py']):
-        with pytest.raises(SystemExit) as exc_info:
-            main()
-        
-        assert exc_info.value.code == 1
+        main()  # Should return early when argparse raises SystemExit
         
         # Check if usage message was printed
         captured = capsys.readouterr()
-        assert "Usage: python crawler.py domain" in captured.out
-        assert "Example: python crawler.py www.example.com" in captured.out
+        assert "usage: crawler.py" in captured.err
+        assert "domain" in captured.err
 
 def test_main_with_domain(tmp_path, monkeypatch):
     """Test main function with a valid domain argument"""
@@ -68,3 +66,33 @@ def test_main_with_crawler_error(capsys):
             
             # Verify save_results was not called after error
             mock_crawler.save_results.assert_not_called()
+
+@pytest.mark.parametrize("flag", ["--external-links", "-e"])
+def test_main_with_external_links_flag(flag):
+    """Test main function with external links flag (both long and short form)"""
+    # Create a mock WebsiteCrawler
+    mock_crawler = MagicMock()
+    mock_crawler.base_url = 'https://example.com'
+    
+    # Patch the WebsiteCrawler class
+    with patch('src.crawler.WebsiteCrawler', return_value=mock_crawler) as mock_class:
+        # Set up command line arguments with external links flag
+        with patch.object(sys, 'argv', ['crawler.py', 'example.com', flag]):
+            # Run main function
+            main()
+            
+            # Verify WebsiteCrawler was created with correct domain
+            mock_class.assert_called_once_with('example.com')
+            
+            # Verify external links check was called instead of normal crawl
+            mock_crawler.check_external_links.assert_called_once()
+            mock_crawler.crawl_page.assert_not_called()
+            
+            # Verify results were saved
+            mock_crawler.save_external_links_results.assert_called_once()
+            mock_crawler.save_results.assert_not_called()
+
+def test_main_with_invalid_flag():
+    """Test main function with an invalid flag"""
+    with patch.object(sys, 'argv', ['crawler.py', 'example.com', '--invalid-flag']):
+        main()  # Should return early when argparse raises SystemExit
