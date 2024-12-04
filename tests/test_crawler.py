@@ -5,6 +5,7 @@ from datetime import datetime
 from src.crawler import main
 import os
 import argparse
+import logging
 
 def test_main_with_no_arguments(capsys):
     """Test main function with no command line arguments"""
@@ -96,3 +97,22 @@ def test_main_with_invalid_flag():
     """Test main function with an invalid flag"""
     with patch.object(sys, 'argv', ['crawler.py', 'example.com', '--invalid-flag']):
         main()  # Should return early when argparse raises SystemExit
+
+def test_main_with_verbose_flag(caplog):
+    """Test main function with verbose flag"""
+    # Create a mock WebsiteCrawler
+    mock_crawler = MagicMock()
+    mock_crawler.base_url = 'https://example.com'
+    
+    # Enable debug logging for the test
+    caplog.set_level(logging.DEBUG)
+    
+    # Patch the WebsiteCrawler class
+    with patch('src.crawler.WebsiteCrawler', return_value=mock_crawler) as mock_class:
+        # Set up command line arguments with verbose flag
+        with patch.object(sys, 'argv', ['crawler.py', 'example.com', '--verbose']):
+            # Run main function
+            main()
+            
+            # Check that debug logging was enabled
+            assert any(record.levelno == logging.DEBUG for record in caplog.records)

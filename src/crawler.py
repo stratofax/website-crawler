@@ -2,21 +2,41 @@
 
 import sys
 import argparse
+import logging
 from datetime import datetime
 from src.website_crawler import WebsiteCrawler
 
+def setup_logging(verbose: bool):
+    """Configure logging based on verbosity level."""
+    log_level = logging.DEBUG if verbose else logging.INFO
+    logging.basicConfig(
+        level=log_level,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+
 def main():
+    """Main function to run the crawler"""
     # Set up argument parser
     parser = argparse.ArgumentParser(description='Crawl a website and generate a report')
     parser.add_argument('domain', help='Domain to crawl (e.g., example.com)')
-    parser.add_argument('-e', '--external-links', action='store_true',
-                      help='Check for external links on the domain')
+    parser.add_argument('-e', '--external-links', action='store_true', help='Check for external links on the domain')
+    parser.add_argument('-v', '--verbose', action='store_true', help='Enable verbose output')
     
     # Parse arguments
     try:
         args = parser.parse_args()
     except SystemExit:
         return
+    
+    # Set up logging
+    logging.basicConfig(
+        level=logging.DEBUG if args.verbose else logging.INFO,
+        format='%(levelname)s: %(message)s'
+    )
+    
+    logger = logging.getLogger(__name__)
+    logger.debug("Debug logging enabled")
     
     # Create crawler instance
     crawler = WebsiteCrawler(args.domain)

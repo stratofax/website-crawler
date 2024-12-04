@@ -8,6 +8,7 @@ import csv
 import time
 from unittest.mock import patch
 from requests.exceptions import RequestException
+import logging
 
 def test_init():
     """Test WebsiteCrawler initialization"""
@@ -229,23 +230,24 @@ def test_save_results():
         os.unlink(output_file)
 
 @responses.activate
-def test_is_external_link():
+def test_is_external_url():
     """Test checking if a URL is external"""
     domain = "example.com"
     crawler = WebsiteCrawler(domain)
-    
+
     # Test internal links
-    assert not crawler.is_external_link("https://example.com")
-    assert not crawler.is_external_link("https://example.com/page")
-    assert not crawler.is_external_link("https://sub.example.com")
-    
+    assert not crawler.is_external_url("https://example.com")
+    assert not crawler.is_external_url("https://example.com/page")
+    assert not crawler.is_external_url("https://sub.example.com")
+
     # Test external links
-    assert crawler.is_external_link("https://external.com")
-    assert crawler.is_external_link("http://another.com/page")
-    
+    assert crawler.is_external_url("https://other-domain.com")
+    assert crawler.is_external_url("https://example.org")
+
     # Test invalid URLs
-    assert not crawler.is_external_link("not-a-url")
-    assert not crawler.is_external_link("")
+    assert not crawler.is_external_url(None)
+    assert not crawler.is_external_url("")
+    assert not crawler.is_external_url("not-a-url")
 
 @responses.activate
 def test_check_external_links():
@@ -349,3 +351,66 @@ def test_save_external_links_results(tmp_path):
         assert lines[0].strip() == "External URL"
         assert "https://external1.com" in [line.strip() for line in lines]
         assert "https://external2.com" in [line.strip() for line in lines]
+
+def test_skip_non_http_links(caplog):
+    """Test that non-HTTP links are properly skipped and logged"""
+    domain = "example.com"
+    crawler = WebsiteCrawler(domain)
+
+    # Enable debug logging for the test
+    caplog.set_level(logging.DEBUG)
+
+    # Mock response with various non-HTTP links
+    html_content = """
+    <html>
+        <head><title>Test Page</title></head>
+        <body>
+            <a href="mailto:info@example.com">Email</a>
+            <a href="tel:+1234567890">Phone</a>
+            <a href="javascript:void(0)">JS Link</a>
+        </body>
+    </html>
+    """
+    
+    responses.add(
+        responses.GET,
+        'https://example.com',
+        body=html_content,
+        status=200,
+        content_type='text/html'
+    )
+
+    with responses.RequestsMock() as rsps:
+        rsps.add(
+            responses.GET,
+            'https://example.com',
+            body=html_content,
+            status=200,
+            content_type='text/html'
+        )
+        crawler.crawl()
+
+        # Check that appropriate messages were logged
+        assert 'Skipping non-HTTP link: mailto:info@example.com' in caplog.text
+        assert 'Skipping non-HTTP link: tel:+1234567890' in caplog.text
+        assert 'Skipping non-HTTP link: javascript:void(0)' in caplog.text
+
+def test_url_utility_methods():
+    """Test URL utility methods with invalid inputs"""
+    domain = "example.com"
+    crawler = WebsiteCrawler(domain)
+
+    # Test clean_url with invalid URL
+    assert crawler.clean_url(None) is None
+    assert crawler.clean_url('') is None
+    assert crawler.clean_url('not-a-url') is None
+
+    # Test is_internal_url with invalid URL
+    assert not crawler.is_internal_url(None)
+    assert not crawler.is_internal_url('')
+    assert not crawler.is_internal_url('not-a-url')
+
+    # Test is_external_url with invalid URL
+    assert not crawler.is_external_url(None)
+    assert not crawler.is_external_url('')
+    assert not crawler.is_external_url('not-a-url')
