@@ -2,7 +2,7 @@
 
 import sys
 from datetime import datetime
-from website_crawler import WebsiteCrawler
+from src.website_crawler import WebsiteCrawler
 
 def main():
     if len(sys.argv) != 2:

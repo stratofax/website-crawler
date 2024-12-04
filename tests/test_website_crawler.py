@@ -1,5 +1,5 @@
 import pytest
-from website_crawler import WebsiteCrawler
+from src.website_crawler import WebsiteCrawler
 from urllib.parse import urlparse
 import responses
 import tempfile

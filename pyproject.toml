@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "A Python-based website crawler that generates CSV reports"
 authors = ["Neil Johnson <neil@cadent.com>"]
 readme = "README.md"
-packages = [{include = "crawler.py"}]
+packages = [{include = "src"}]
 
 [tool.poetry.dependencies]
 python = "^3.9"
