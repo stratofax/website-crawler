@@ -11,20 +11,23 @@ The output file is automatically named using the domain and current timestamp (e
 - Python 3.9 or higher
 - Poetry (dependency management)
 
-## Setup
+## Installation
 1. Install Poetry (if not already installed):
 ```bash
 curl -sSL https://install.python-poetry.org | python3 -
 ```
 
-2. Install dependencies:
+2. Clone this repository and install the package:
 ```bash
+git clone <repository-url>
+cd website-crawler
 poetry install
 ```
 
 ## Usage
+The crawler can be run using Poetry:
 ```bash
-poetry run python src/crawler.py [-h] [-e] [-v] domain
+poetry run crawler [-h] [-e] [-v] [-r] domain
 ```
 
 ### Arguments
@@ -34,22 +37,33 @@ poetry run python src/crawler.py [-h] [-e] [-v] domain
 ### Options
 
 - `-h, --help`: Show help message and exit
-- `-e, --external-links`: Check for external links on the domain. This will recursively crawl all internal pages and collect links to external domains.
-- `-v, --verbose`: Enable verbose output. Shows detailed debugging information during crawling.
+- `-e, --external-links`: Check for external links on the domain. When enabled, generates a separate CSV file with external links found on each page
+- `-v, --verbose`: Enable verbose output. Shows detailed debugging information during crawling
+- `-r, --recursive`: Recursively crawl internal links. When disabled (default), only crawls the specified page
 
 ### Examples
 
-Basic crawl of a domain:
+Basic crawl of a single page:
 ```bash
-poetry run python src/crawler.py example.com
+poetry run crawler example.com
 ```
 
-Collect external links with verbose output:
+Recursively crawl a domain and collect external links with verbose output:
 ```bash
-poetry run python src/crawler.py example.com -e -v
+poetry run crawler example.com -e -v -r
 ```
 
-The output file is automatically named using the domain and current timestamp (e.g., `example.com_2024-01-23T1430.csv`).
+### Output Files
+
+The crawler generates one of two types of CSV files:
+
+1. Standard crawl results (default):
+   - Filename format: `domain_YYYY-MM-DDThhmm.csv`
+   - Contains: URL, page title, and HTTP status for each crawled page
+
+2. External links report (when using -e flag):
+   - Filename format: `domain_YYYY-MM-DDThhmm_external_links.csv`
+   - Contains: Source URL and all external links found on that page
 
 ## License
 

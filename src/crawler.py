@@ -9,11 +9,19 @@ from .website_crawler import WebsiteCrawler
 def setup_logging(verbose: bool):
     """Configure logging based on verbosity level."""
     log_level = logging.DEBUG if verbose else logging.INFO
+    
+    # Force remove all handlers to ensure basicConfig works
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
+    
     logging.basicConfig(
         level=log_level,
         format='%(asctime)s - %(levelname)s - %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
     )
+    
+    # Ensure root logger level is set
+    logging.getLogger().setLevel(log_level)
 
 def main():
     """Main function to run the crawler"""

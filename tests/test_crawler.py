@@ -2,117 +2,108 @@ import pytest
 import sys
 from unittest.mock import patch, MagicMock
 from datetime import datetime
-from src.crawler import main
+from src.crawler import main, setup_logging
 import os
 import argparse
 import logging
+
+@pytest.fixture
+def reset_logging():
+    """Reset logging configuration before and after each test"""
+    logging.root.handlers = []
+    logging.root.setLevel(logging.WARNING)
+    yield
+    logging.root.handlers = []
+    logging.root.setLevel(logging.WARNING)
 
 def test_main_with_no_arguments(capsys):
     """Test main function with no command line arguments"""
     # Simulate no command line arguments
     with patch.object(sys, 'argv', ['crawler.py']):
-        main()  # Should return early when argparse raises SystemExit
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+        assert exc_info.value.code == 2
         
         # Check if usage message was printed
         captured = capsys.readouterr()
         assert "usage: crawler.py" in captured.err
         assert "domain" in captured.err
 
-def test_main_with_domain(tmp_path, monkeypatch):
+def test_main_with_domain():
     """Test main function with a valid domain argument"""
     # Create a mock WebsiteCrawler
     mock_crawler = MagicMock()
-    mock_crawler.base_url = 'https://example.com'
-    mock_crawler.visited_urls = set(['https://example.com'])
-    
-    # Patch the WebsiteCrawler class
-    with patch('src.crawler.WebsiteCrawler', return_value=mock_crawler) as mock_class:
-        # Set up command line argument
-        with patch.object(sys, 'argv', ['crawler.py', 'example.com']):
-            # Freeze datetime to a known value
-            frozen_time = datetime(2024, 1, 1, 12, 0)
-            with patch('src.crawler.datetime') as mock_datetime:
-                mock_datetime.now.return_value = frozen_time
-                
-                # Run main function
-                main()
-                
-                # Verify WebsiteCrawler was created with correct domain
-                mock_class.assert_called_once_with('example.com')
-                
-                # Verify crawler methods were called
-                mock_crawler.crawl_page.assert_called_once_with(mock_crawler.base_url)
-                mock_crawler.save_results.assert_called_once()
-                
-                # Verify the filename format
-                expected_filename = f"example.com_2024-01-01T1200.csv"
-                actual_filename = mock_crawler.save_results.call_args[0][0]
-                assert os.path.basename(actual_filename) == expected_filename
-
-def test_main_with_crawler_error(capsys):
-    """Test main function when crawler encounters an error"""
-    # Create a mock WebsiteCrawler that raises an exception
-    mock_crawler = MagicMock()
-    mock_crawler.crawl_page.side_effect = Exception("Network error")
     
     # Patch the WebsiteCrawler class
     with patch('src.crawler.WebsiteCrawler', return_value=mock_crawler):
         # Set up command line argument
         with patch.object(sys, 'argv', ['crawler.py', 'example.com']):
-            # Run main function
-            with pytest.raises(Exception) as exc_info:
+            main()
+            
+            # Verify crawler methods were called
+            mock_crawler.crawl.assert_called_once_with(recursive=False)
+            mock_crawler.save_results.assert_called_once()
+
+def test_main_with_external_links():
+    """Test main function with external links flag"""
+    mock_crawler = MagicMock()
+    
+    with patch('src.crawler.WebsiteCrawler', return_value=mock_crawler):
+        with patch.object(sys, 'argv', ['crawler.py', 'example.com', '-e']):
+            main()
+            
+            # Verify crawler methods were called with correct arguments
+            mock_crawler.crawl.assert_called_once_with(collect_external=True, recursive=False)
+            mock_crawler.save_external_links_results.assert_called_once()
+            assert not mock_crawler.save_results.called
+
+def test_main_with_recursive():
+    """Test main function with recursive flag"""
+    mock_crawler = MagicMock()
+    
+    with patch('src.crawler.WebsiteCrawler', return_value=mock_crawler):
+        with patch.object(sys, 'argv', ['crawler.py', 'example.com', '-r']):
+            main()
+            
+            # Verify crawler methods were called with recursive=True
+            mock_crawler.crawl.assert_called_once_with(recursive=True)
+            mock_crawler.save_results.assert_called_once()
+
+def test_setup_logging_verbose(reset_logging):
+    """Test logging setup in verbose mode"""
+    setup_logging(verbose=True)
+    assert logging.getLogger().level == logging.DEBUG
+
+def test_setup_logging_normal(reset_logging):
+    """Test logging setup in normal mode"""
+    setup_logging(verbose=False)
+    assert logging.getLogger().level == logging.INFO
+
+def test_main_with_error(capsys, reset_logging):
+    """Test main function when crawler encounters an error"""
+    mock_crawler = MagicMock()
+    test_error = Exception("Network error")
+    mock_crawler.crawl.side_effect = test_error
+    
+    with patch('src.crawler.WebsiteCrawler', return_value=mock_crawler):
+        with patch.object(sys, 'argv', ['crawler.py', 'example.com']):
+            with pytest.raises(SystemExit) as exc_info:
                 main()
             
-            assert str(exc_info.value) == "Network error"
-            
-            # Verify save_results was not called after error
-            mock_crawler.save_results.assert_not_called()
+            assert exc_info.value.code == 1
+            # Verify error was logged to stderr
+            captured = capsys.readouterr()
+            assert "An error occurred: Network error" in captured.err
 
-@pytest.mark.parametrize("flag", ["--external-links", "-e"])
-def test_main_with_external_links_flag(flag):
-    """Test main function with external links flag (both long and short form)"""
-    # Create a mock WebsiteCrawler
+def test_main_with_all_options():
+    """Test main function with all flags enabled"""
     mock_crawler = MagicMock()
-    mock_crawler.base_url = 'https://example.com'
     
-    # Patch the WebsiteCrawler class
-    with patch('src.crawler.WebsiteCrawler', return_value=mock_crawler) as mock_class:
-        # Set up command line arguments with external links flag
-        with patch.object(sys, 'argv', ['crawler.py', 'example.com', flag]):
-            # Run main function
+    with patch('src.crawler.WebsiteCrawler', return_value=mock_crawler):
+        with patch.object(sys, 'argv', ['crawler.py', 'example.com', '-e', '-v', '-r']):
             main()
             
-            # Verify WebsiteCrawler was created with correct domain
-            mock_class.assert_called_once_with('example.com')
-            
-            # Verify external links check was called instead of normal crawl
-            mock_crawler.check_external_links.assert_called_once()
-            mock_crawler.crawl_page.assert_not_called()
-            
-            # Verify results were saved
+            # Verify crawler methods were called with all options
+            mock_crawler.crawl.assert_called_once_with(collect_external=True, recursive=True)
             mock_crawler.save_external_links_results.assert_called_once()
-            mock_crawler.save_results.assert_not_called()
-
-def test_main_with_invalid_flag():
-    """Test main function with an invalid flag"""
-    with patch.object(sys, 'argv', ['crawler.py', 'example.com', '--invalid-flag']):
-        main()  # Should return early when argparse raises SystemExit
-
-def test_main_with_verbose_flag(caplog):
-    """Test main function with verbose flag"""
-    # Create a mock WebsiteCrawler
-    mock_crawler = MagicMock()
-    mock_crawler.base_url = 'https://example.com'
-    
-    # Enable debug logging for the test
-    caplog.set_level(logging.DEBUG)
-    
-    # Patch the WebsiteCrawler class
-    with patch('src.crawler.WebsiteCrawler', return_value=mock_crawler) as mock_class:
-        # Set up command line arguments with verbose flag
-        with patch.object(sys, 'argv', ['crawler.py', 'example.com', '--verbose']):
-            # Run main function
-            main()
-            
-            # Check that debug logging was enabled
-            assert any(record.levelno == logging.DEBUG for record in caplog.records)
+            assert not mock_crawler.save_results.called

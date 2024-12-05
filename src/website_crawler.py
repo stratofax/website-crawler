@@ -22,6 +22,8 @@ class WebsiteCrawler:
     def __init__(self, domain: str):
         self.domain = domain
         self.base_url = f"https://{domain}"
+        # Normalize the base URL
+        self.base_url, _ = self.process_url(self.base_url)
         self.visited_urls: Set[str] = set()
         self.results: List[Tuple[str, str, int]] = []
         self.external_links: Set[str] = set()
@@ -45,8 +47,14 @@ class WebsiteCrawler:
             if not parsed_url.scheme or not parsed_url.netloc:
                 raise URLProcessingError("Invalid URL format")
                 
-            # Clean URL by removing fragments and query parameters
-            clean_url = f"{parsed_url.scheme}://{parsed_url.netloc}{parsed_url.path}"
+            # Clean URL by removing fragments, query parameters, and trailing slashes
+            path = parsed_url.path
+            if not path or path == '/':
+                path = ''
+            else:
+                path = path.rstrip('/')
+                
+            clean_url = f"{parsed_url.scheme}://{parsed_url.netloc}{path}"
             is_internal = self.domain in parsed_url.netloc
             
             if parsed_url.scheme not in ('http', 'https'):
