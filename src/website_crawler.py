@@ -10,6 +10,24 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# List of file extensions that are considered web pages
+PAGE_EXTENSIONS = {
+    '', # for URLs ending in '/'
+    'html',
+    'htm',
+    'php',
+    'asp',
+    'aspx',
+    'jsp',
+    'shtml',
+    'phtml',
+    'xhtml',
+    'jspx',
+    'do',
+    'cfm',
+    'cgi'
+}
+
 class URLProcessingError(Exception):
     """Custom exception for URL processing errors"""
     pass
@@ -27,6 +45,7 @@ class WebsiteCrawler:
         self.visited_urls: Set[str] = set()
         self.results: List[Tuple[str, str, int]] = []
         self.external_links: Set[str] = set()
+        self.pages_only: bool = False
         self.session = requests.Session()
         # Set a user agent to be more polite
         self.session.headers.update({
@@ -65,7 +84,37 @@ class WebsiteCrawler:
         except Exception as e:
             raise URLProcessingError(f"URL processing error: {str(e)}")
 
-    def crawl(self, collect_external: bool = False, recursive: bool = False) -> None:
+    def is_page(self, url: str) -> bool:
+        """
+        Check if a URL points to a web page based on its extension or path.
+        
+        Args:
+            url: The URL to check
+            
+        Returns:
+            bool: True if the URL is considered a web page, False otherwise
+        """
+        try:
+            parsed = urlparse(url)
+            path = parsed.path.rstrip('/')
+            
+            # URLs ending with '/' are considered pages (directory index)
+            if not path or path.endswith('/'):
+                return True
+                
+            # Check if the file extension (if any) is in our list of page extensions
+            if '.' in path:
+                ext = path.split('.')[-1].lower()
+                return ext in PAGE_EXTENSIONS
+                
+            # URLs without extensions are considered pages
+            return True
+            
+        except Exception as e:
+            logger.debug(f"Error checking if URL is page: {str(e)}")
+            return False
+
+    def crawl(self, collect_external: bool = False, recursive: bool = False, pages_only: bool = False) -> None:
         """
         Crawl the website starting from the base URL.
         
@@ -80,9 +129,13 @@ class WebsiteCrawler:
         Args:
             collect_external: If True, record (but don't crawl) external links found
             recursive: If True, recursively follow internal links on all visited pages
+            pages_only: If True, only process URLs that are considered web pages
         """
+        self.pages_only = pages_only
         logger.info(f"Starting crawl of {self.base_url}")
-        logger.info(f"Mode: {'Recursive' if recursive else 'Single-level'} crawl, {'collecting' if collect_external else 'ignoring'} external links")
+        logger.info(f"Mode: {'Recursive' if recursive else 'Single-level'} crawl, "
+                   f"{'collecting' if collect_external else 'ignoring'} external links, "
+                   f"{'pages only' if pages_only else 'all files'}")
         self._crawl_page(self.base_url, collect_external, recursive)
         logger.info(f"Crawl complete. Visited {len(self.visited_urls)} pages")
         if collect_external:
@@ -93,6 +146,11 @@ class WebsiteCrawler:
         try:
             clean_url, is_internal = self.process_url(url)
             if not is_internal or clean_url in self.visited_urls:
+                return
+
+            # Skip non-page URLs if pages_only is True
+            if self.pages_only and not self.is_page(clean_url):
+                logger.debug(f"Skipping non-page URL: {clean_url}")
                 return
 
             self.visited_urls.add(clean_url)

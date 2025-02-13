@@ -30,6 +30,7 @@ def main():
     parser.add_argument('-e', '--external-links', action='store_true', help='Check for external links on the domain')
     parser.add_argument('-v', '--verbose', action='store_true', help='Enable verbose output')
     parser.add_argument('-r', '--recursive', action='store_true', help='Recursively crawl internal links')
+    parser.add_argument('-p', '--pages', action='store_true', help='Only crawl web pages (HTML, PHP, etc.) and skip other file types')
     
     args = parser.parse_args()
     
@@ -43,11 +44,11 @@ def main():
     
     try:
         if args.external_links:
-            crawler.crawl(collect_external=True, recursive=args.recursive)
+            crawler.crawl(collect_external=True, recursive=args.recursive, pages_only=args.pages)
             output_file = f"{args.domain}_{timestamp}_external_links.csv"
             crawler.save_external_links_results(output_file)
         else:
-            crawler.crawl(recursive=args.recursive)
+            crawler.crawl(recursive=args.recursive, pages_only=args.pages)
             output_file = f"{args.domain}_{timestamp}.csv"
             crawler.save_results(output_file)
         

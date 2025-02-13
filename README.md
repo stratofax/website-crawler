@@ -27,7 +27,7 @@ poetry install
 ## Usage
 The crawler can be run using Poetry:
 ```bash
-poetry run crawler [-h] [-e] [-v] [-r] domain
+poetry run crawler [-h] [-e] [-v] [-r] [-p] domain
 ```
 
 ### Arguments
@@ -40,6 +40,7 @@ poetry run crawler [-h] [-e] [-v] [-r] domain
 - `-e, --external-links`: Check for external links on the domain. When enabled, generates a separate CSV file with external links found on each page
 - `-v, --verbose`: Enable verbose output. Shows detailed debugging information during crawling
 - `-r, --recursive`: Recursively crawl internal links. When disabled (default), only crawls the specified page
+- `-p, --pages`: Only crawl web pages (HTML, PHP, etc.) and skip other file types. Recognized page types include files ending in: /, .html, .htm, .php, .asp, .aspx, .jsp, .shtml, .phtml, .xhtml, .jspx, .do, .cfm, and .cgi
 
 ### Examples
 
