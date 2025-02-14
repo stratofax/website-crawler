@@ -96,6 +96,9 @@ class WebsiteCrawler:
         """
         try:
             parsed = urlparse(url)
+            if not parsed.scheme or not parsed.netloc:
+                return False
+                
             path = parsed.path.rstrip('/')
             
             # URLs ending with '/' are considered pages (directory index)

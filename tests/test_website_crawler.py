@@ -628,3 +628,99 @@ def test_crawl_page_with_connection_error():
     assert len(crawler.results) == 1
     assert crawler.results[0][1] == "Error"
     assert crawler.results[0][2] == 0
+
+def test_is_page():
+    """Test URL page type detection"""
+    crawler = WebsiteCrawler("example.com")
+    
+    # Test URLs ending with '/'
+    assert crawler.is_page("https://example.com/") is True
+    assert crawler.is_page("https://example.com/path/") is True
+    
+    # Test URLs with page extensions
+    assert crawler.is_page("https://example.com/page.html") is True
+    assert crawler.is_page("https://example.com/page.php") is True
+    assert crawler.is_page("https://example.com/page.asp") is True
+    
+    # Test URLs without extensions
+    assert crawler.is_page("https://example.com/about") is True
+    
+    # Test non-page URLs
+    assert crawler.is_page("https://example.com/image.jpg") is False
+    assert crawler.is_page("https://example.com/doc.pdf") is False
+    
+    # Test invalid URLs
+    assert crawler.is_page("not-a-url") is False
+
+@responses.activate
+def test_crawl_pages_only():
+    """Test crawling with pages_only flag"""
+    domain = "example.com"
+    crawler = WebsiteCrawler(domain)
+    
+    # Mock response with various link types
+    html_content = """
+    <html>
+        <head><title>Test Page</title></head>
+        <body>
+            <a href="https://example.com/page1.html">Page 1</a>
+            <a href="https://example.com/image.jpg">Image</a>
+            <a href="https://example.com/doc.pdf">Document</a>
+        </body>
+    </html>
+    """
+    
+    responses.add(
+        responses.GET,
+        'https://example.com',
+        body=html_content,
+        status=200,
+        content_type='text/html'
+    )
+    
+    # Add mock response for page1.html
+    responses.add(
+        responses.GET,
+        'https://example.com/page1.html',
+        body='<html><head><title>Page 1</title></head><body>Test</body></html>',
+        status=200,
+        content_type='text/html'
+    )
+    
+    # Crawl with pages_only=True
+    crawler.crawl(recursive=True, pages_only=True)
+    
+    # Should only visit the base URL and page1.html
+    assert len(crawler.visited_urls) == 2
+    assert 'https://example.com' in crawler.visited_urls
+    assert 'https://example.com/page1.html' in crawler.visited_urls
+    assert 'https://example.com/image.jpg' not in crawler.visited_urls
+    assert 'https://example.com/doc.pdf' not in crawler.visited_urls
+
+@responses.activate
+def test_crawl_page_http_error():
+    """Test crawling a page that returns specific HTTP error codes"""
+    domain = "example.com"
+    crawler = WebsiteCrawler(domain)
+    
+    # Mock a 404 response
+    responses.add(
+        responses.GET,
+        'https://example.com/not-found',
+        status=404
+    )
+    
+    # Mock a 500 response
+    responses.add(
+        responses.GET,
+        'https://example.com/server-error',
+        status=500
+    )
+    
+    # Test 404 error
+    crawler.crawl_page('https://example.com/not-found')
+    assert ('https://example.com/not-found', 'Error', 404) in crawler.results
+    
+    # Test 500 error
+    crawler.crawl_page('https://example.com/server-error')
+    assert ('https://example.com/server-error', 'Error', 500) in crawler.results
