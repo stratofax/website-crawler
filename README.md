@@ -66,6 +66,23 @@ The crawler generates one of two types of CSV files:
    - Filename format: `domain_YYYY-MM-DDThhmm_external_links.csv`
    - Contains: Source URL and all external links found on that page
 
+## Testing
+
+Run the test suite using Poetry:
+```bash
+poetry run pytest
+```
+
+For test coverage report:
+```bash
+poetry run pytest --cov=src --cov-report=term-missing
+```
+
+The test suite includes:
+- Unit tests for the crawler CLI interface
+- Unit tests for the website crawler functionality
+- Coverage reporting to identify untested code
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

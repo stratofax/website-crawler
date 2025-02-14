@@ -41,7 +41,7 @@ def test_main_with_domain():
             main()
             
             # Verify crawler methods were called
-            mock_crawler.crawl.assert_called_once_with(recursive=False)
+            mock_crawler.crawl.assert_called_once_with(recursive=False, pages_only=False)
             mock_crawler.save_results.assert_called_once()
 
 def test_main_with_external_links():
@@ -53,7 +53,7 @@ def test_main_with_external_links():
             main()
             
             # Verify crawler methods were called with correct arguments
-            mock_crawler.crawl.assert_called_once_with(collect_external=True, recursive=False)
+            mock_crawler.crawl.assert_called_once_with(collect_external=True, recursive=False, pages_only=False)
             mock_crawler.save_external_links_results.assert_called_once()
             assert not mock_crawler.save_results.called
 
@@ -66,7 +66,7 @@ def test_main_with_recursive():
             main()
             
             # Verify crawler methods were called with recursive=True
-            mock_crawler.crawl.assert_called_once_with(recursive=True)
+            mock_crawler.crawl.assert_called_once_with(recursive=True, pages_only=False)
             mock_crawler.save_results.assert_called_once()
 
 def test_setup_logging_verbose(reset_logging):
@@ -104,6 +104,6 @@ def test_main_with_all_options():
             main()
             
             # Verify crawler methods were called with all options
-            mock_crawler.crawl.assert_called_once_with(collect_external=True, recursive=True)
+            mock_crawler.crawl.assert_called_once_with(collect_external=True, recursive=True, pages_only=False)
             mock_crawler.save_external_links_results.assert_called_once()
             assert not mock_crawler.save_results.called

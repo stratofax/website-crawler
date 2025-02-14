@@ -59,5 +59,6 @@ def main():
         logger.error(f"An error occurred: {str(e)}")
         sys.exit(1)
 
+# pragma: no cover
 if __name__ == "__main__":
     main()
