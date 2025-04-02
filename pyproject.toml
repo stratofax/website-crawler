@@ -6,6 +6,9 @@ authors = ["Neil Johnson <neil@cadent.com>"]
 readme = "README.md"
 packages = [{include = "src"}]
 
+[tool.poetry.scripts]
+crawler = "src.crawler:main"
+
 [tool.poetry.dependencies]
 python = "^3.9"
 requests = "^2.32.3"
