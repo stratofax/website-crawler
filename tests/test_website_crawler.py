@@ -5,10 +5,17 @@ import responses
 import tempfile
 import os
 import csv
-import time
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from requests.exceptions import RequestException
-import logging
+import requests
+
+
+@pytest.fixture
+def crawler_instance():
+    """Fixture to create a WebsiteCrawler instance for testing."""
+    crawler = WebsiteCrawler("example.com")
+    return crawler
+
 
 def test_init():
     """Test WebsiteCrawler initialization"""
@@ -724,3 +731,57 @@ def test_crawl_page_http_error():
     # Test 500 error
     crawler.crawl_page('https://example.com/server-error')
     assert ('https://example.com/server-error', 'Error', 500) in crawler.results
+
+def test_crawl_with_non_page_skipped(crawler_instance):
+    """Test that non-page URLs are skipped when pages_only is True."""
+    base_url = "http://example.com/page"
+    non_page_url = "http://example.com/image.jpg"
+    crawler_instance.base_url = base_url
+    crawler_instance.domain = "example.com"
+    crawler_instance.visited_urls = set()
+
+    # Mock requests.get to return minimal HTML with a link to a non-page
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.headers = {'Content-Type': 'text/html'}
+    mock_response.text = f'<html><body><a href="{non_page_url}">Non-page</a></body></html>'
+    mock_response.url = base_url # Set the final URL after potential redirects
+
+    with patch('requests.get', return_value=mock_response):
+        crawler_instance.crawl(pages_only=True, recursive=False)
+
+    # Assert that the base URL was visited, but the non-page URL was not
+    assert base_url in crawler_instance.visited_urls
+    assert non_page_url not in crawler_instance.visited_urls
+    # Check results if needed, e.g., that the non-page URL isn't in results
+    assert not any(url == non_page_url for url, _, _ in crawler_instance.results)
+
+def test_is_page_exception(crawler_instance, caplog):
+    """Test that is_page handles exceptions gracefully."""
+    malformed_url = "http://[::1]:80" # Example that might cause urlparse issues on some systems or is invalid
+
+    # Fix: Patch the urlparse at the correct import location
+    with patch('src.website_crawler.urlparse', side_effect=ValueError("Mock parsing error")):
+        assert not crawler_instance.is_page(malformed_url)
+
+    # Check that a debug message was logged
+    assert "Error checking if URL is page: Mock parsing error" in caplog.text
+
+def test_save_results_empty(crawler_instance, tmp_path):
+    """Test saving results when no pages were crawled."""
+    # Create a temporary file
+    output_file = tmp_path / "results.csv"
+    
+    # Ensure results is empty
+    crawler_instance.results = []
+    
+    # Save results
+    crawler_instance.save_results(output_file)
+    
+    # Check that the file was created
+    assert output_file.exists()
+    # Fix: Even with no results, the CSV header is still written
+    # So we check that only the header exists (URL,Title,Status Code)
+    with open(output_file, 'r') as f:
+        content = f.read()
+        assert content.strip() == "URL,Title,Status Code"
