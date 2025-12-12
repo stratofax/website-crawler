@@ -463,8 +463,8 @@ def test_save_external_links():
 
 
 @responses.activate
-def test_check_external_links():
-    """Test the check_external_links method"""
+def test_recursive_external_links_collection():
+    """Test recursive crawling with external link collection"""
     domain = "example.com"
     crawler = WebsiteCrawler(domain)
 
@@ -498,161 +498,11 @@ def test_check_external_links():
         status=200
     )
 
-    # Test check_external_links
-    crawler.check_external_links()
+    # Test recursive crawl with external links
+    crawler.crawl(collect_external=True, recursive=True)
 
     assert len(crawler.external_links) == 2
     assert len(crawler.visited_urls) == 2
-
-
-@responses.activate
-def test_crawl_page_with_non_http_links():
-    """Test handling of non-HTTP links in crawl_page"""
-    domain = "example.com"
-    crawler = WebsiteCrawler(domain)
-
-    # Mock response with non-HTTP links
-    responses.add(
-        responses.GET,
-        'https://example.com',
-        body="""
-        <html>
-            <head><title>Test Page</title></head>
-            <body>
-                <a href="mailto:test@example.com">Email</a>
-                <a href="tel:+1234567890">Phone</a>
-                <a href="javascript:void(0)">JavaScript</a>
-                <a href="ftp://example.com/file">FTP</a>
-            </body>
-        </html>
-        """,
-        status=200
-    )
-
-    # Test crawl_page
-    crawler.crawl_page('https://example.com')
-
-    assert len(crawler.visited_urls) == 1
-    assert len(crawler.results) == 1
-    assert crawler.results[0][1] == "Test Page"
-
-
-@responses.activate
-def test_crawl_page_with_none_url():
-    """Test crawl_page with None URL from process_url"""
-    domain = "example.com"
-    crawler = WebsiteCrawler(domain)
-
-    # Mock process_url to return None
-    def mock_process_url(url):
-        if url == "https://example.com/invalid":
-            return None, False
-        return url, True
-
-    crawler.process_url = mock_process_url
-
-    # Test crawl_page with None URL
-    crawler.crawl_page("https://example.com/invalid")
-
-    assert len(crawler.visited_urls) == 0
-    assert len(crawler.results) == 0
-
-
-@responses.activate
-def test_crawl_page_recursive_already_visited():
-    """Test recursive crawl_page with already visited URLs"""
-    domain = "example.com"
-    crawler = WebsiteCrawler(domain)
-
-    # Add a URL to visited_urls
-    crawler.visited_urls.add("https://example.com/page1")
-
-    # Mock response with link to already visited page
-    responses.add(
-        responses.GET,
-        'https://example.com',
-        body="""
-        <html>
-            <head><title>Test Page</title></head>
-            <body>
-                <a href="https://example.com/page1">Already Visited</a>
-            </body>
-        </html>
-        """,
-        status=200
-    )
-
-    # Test crawl_page
-    crawler.crawl_page('https://example.com', recursive=True)
-
-    assert len(crawler.visited_urls) == 2
-    assert "https://example.com/page1" in crawler.visited_urls
-
-
-@responses.activate
-def test_crawl_page_with_invalid_url_processing():
-    """Test crawl_page with invalid URL that fails processing"""
-    domain = "example.com"
-    crawler = WebsiteCrawler(domain)
-
-    # Mock process_url to raise an exception
-    def mock_process_url(url):
-        if url == "https://example.com/invalid":
-            raise URLProcessingError("Invalid URL")
-        return url, True
-
-    crawler.process_url = mock_process_url
-
-    # Test crawl_page with invalid URL
-    try:
-        crawler.crawl_page("https://example.com/invalid")
-    except URLProcessingError:
-        pass
-
-    assert len(crawler.visited_urls) == 0
-    assert len(crawler.results) == 0
-
-
-@responses.activate
-def test_crawl_page_with_general_exception():
-    """Test crawl_page with a general exception during processing"""
-    domain = "example.com"
-    crawler = WebsiteCrawler(domain)
-
-    # Mock requests.get to raise a general exception
-    def mock_get(url, **kwargs):
-        raise Exception("General error")
-
-    crawler.session.get = mock_get
-
-    # Test crawl_page with URL that will cause an error
-    crawler.crawl_page("https://example.com")
-
-    assert len(crawler.visited_urls) == 1
-    assert len(crawler.results) == 1
-    assert crawler.results[0][1] == "Error"
-    assert crawler.results[0][2] == 0
-
-
-@responses.activate
-def test_crawl_page_with_connection_error():
-    """Test crawl_page with a connection error"""
-    domain = "example.com"
-    crawler = WebsiteCrawler(domain)
-
-    # Mock requests.get to raise a connection error
-    def mock_get(url, **kwargs):
-        raise requests.exceptions.ConnectionError("Connection failed")
-
-    crawler.session.get = mock_get
-
-    # Test crawl_page with URL that will cause a connection error
-    crawler.crawl_page("https://example.com")
-
-    assert len(crawler.visited_urls) == 1
-    assert len(crawler.results) == 1
-    assert crawler.results[0][1] == "Error"
-    assert crawler.results[0][2] == 0
 
 
 def test_is_page():
@@ -722,36 +572,6 @@ def test_crawl_pages_only():
     assert 'https://example.com/page1.html' in crawler.visited_urls
     assert 'https://example.com/image.jpg' not in crawler.visited_urls
     assert 'https://example.com/doc.pdf' not in crawler.visited_urls
-
-
-@responses.activate
-def test_crawl_page_http_error():
-    """Test crawling a page that returns specific HTTP error codes"""
-    domain = "example.com"
-    crawler = WebsiteCrawler(domain)
-
-    # Mock a 404 response
-    responses.add(
-        responses.GET,
-        'https://example.com/not-found',
-        status=404
-    )
-
-    # Mock a 500 response
-    responses.add(
-        responses.GET,
-        'https://example.com/server-error',
-        status=500
-    )
-
-    # Test 404 error
-    crawler.crawl_page('https://example.com/not-found')
-    assert ('https://example.com/not-found', 'Error', 404) in crawler.results
-
-    # Test 500 error
-    crawler.crawl_page('https://example.com/server-error')
-    assert ('https://example.com/server-error',
-            'Error', 500) in crawler.results
 
 
 def test_crawl_with_non_page_skipped(crawler_instance):

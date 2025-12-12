@@ -1,6 +1,7 @@
 # Website Crawler
 
 A Python-based website crawler that recursively visits all pages within a specified subdomain and generates a CSV report containing:
+
 - Page URL
 - Page Title
 - HTTP Status Code
@@ -8,6 +9,7 @@ A Python-based website crawler that recursively visits all pages within a specif
 The output file is automatically named using the domain and current timestamp (e.g., `www.example.com_2024-01-23T1430.csv`).
 
 ## Requirements
+
 - Python 3.9 or higher
 - Poetry (dependency management)
 
@@ -19,15 +21,16 @@ To run this project, you need to have Python 3.10 or higher installed on your sy
 
 On macOS, the default system Python, 3.9, installed via the Xcode Command Line Tools, might cause issues with Poetry installation due to limitations in creating virtual environments. It's recommended to install and use a more recent version of Python managed by [Homebrew](https://brew.sh/):
 
-1.  **Install Homebrew (if not already installed):**
+1. **Install Homebrew (if not already installed):**
     Follow the instructions on the [Homebrew website](https://brew.sh/).
 
-2.  **Install Python via Homebrew:**
+2. **Install Python via Homebrew:**
+
     ```bash
     brew install python
     ```
 
-3.  **Configure your shell (e.g., zsh) to prioritize Homebrew Python:**
+3. **Configure your shell (e.g., zsh) to prioritize Homebrew Python:**
     Add the following line to your shell configuration file (`~/.zshrc` for zsh, `~/.bash_profile` or `~/.bashrc` for bash). This ensures the Homebrew-installed Python is used instead of the system Python.
 
     ```bash
@@ -35,18 +38,21 @@ On macOS, the default system Python, 3.9, installed via the Xcode Command Line T
     # Make sure /opt/homebrew/bin (Apple Silicon) or /usr/local/bin (Intel) is at the start of your PATH
     export PATH="/opt/homebrew/bin:$PATH"
     ```
+
     *Note: The exact path (`/opt/homebrew/bin` or `/usr/local/bin`) depends on your Mac's architecture (Apple Silicon or Intel) and your Homebrew installation.*
 
     Apply the changes by running `source ~/.zshrc` (or your respective config file) or by opening a new terminal window. Verify the correct Python is being used with `which python3` (it should point to the Homebrew path) and `python3 --version`.
 
 ### General Installation Steps
 
-1.  **Install Poetry:**
+1. **Install Poetry:**
+
     ```bash
     curl -sSL https://install.python-poetry.org | python3 -
     ```
 
-2.  **Clone this repository into the current directory, and install the package:**
+2. **Clone this repository into the current directory, and install the package:**
+
     ```bash
     git clone <repository-url>
     cd website-crawler
@@ -54,7 +60,9 @@ On macOS, the default system Python, 3.9, installed via the Xcode Command Line T
     ```
 
 ## Usage
+
 The crawler can be run using Poetry:
+
 ```bash
 poetry run crawler [-h] [-e] [-v] [-r] [-p] domain
 ```
@@ -74,11 +82,13 @@ poetry run crawler [-h] [-e] [-v] [-r] [-p] domain
 ### Examples
 
 Basic crawl of a single page:
+
 ```bash
 poetry run crawler example.com
 ```
 
 Recursively crawl a domain and collect external links with verbose output:
+
 ```bash
 poetry run crawler example.com -e -v -r
 ```
@@ -98,16 +108,19 @@ The crawler generates one of two types of CSV files:
 ## Testing
 
 Run the test suite using Poetry:
+
 ```bash
 poetry run pytest
 ```
 
 For test coverage report:
+
 ```bash
 poetry run pytest --cov=src --cov-report=term-missing
 ```
 
 The test suite includes:
+
 - Unit tests for the crawler CLI interface
 - Unit tests for the website crawler functionality
 - Coverage reporting to identify untested code
