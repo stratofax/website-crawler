@@ -2,35 +2,99 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Build & Run Commands
+## Project Overview
 
-- **Install dependencies:** `poetry install`
-- **Run crawler:** `poetry run crawler <domain>` (e.g., `poetry run crawler example.com -e -v -r -p`)
-- **Run all tests:** `poetry run pytest`
-- **Run tests with coverage:** `poetry run pytest --cov=src --cov-report=term-missing`
-- **Run a single test:** `poetry run pytest tests/test_website_crawler.py::test_crawl_page`
-- **Format code:** `poetry run autopep8 --in-place --recursive src/ tests/`
+A Python-based website crawler that recursively visits pages within a specified subdomain and generates CSV reports. The crawler can collect page metadata (title, status code) and optionally track external links.
+
+## Development Commands
+
+### Setup
+```bash
+poetry install
+```
+
+### Running the Crawler
+```bash
+# Basic single-page crawl
+poetry run crawler example.com
+
+# Recursive crawl with external links and verbose output
+poetry run crawler example.com -e -v -r
+
+# Only crawl web pages (skip PDFs, images, etc.)
+poetry run crawler example.com -r -p
+```
+
+### Testing
+```bash
+# Run all tests
+poetry run pytest
+
+# Run with coverage report
+poetry run pytest --cov=src --cov-report=term-missing
+
+# Run a single test file
+poetry run pytest tests/test_website_crawler.py
+
+# Run a specific test
+poetry run pytest tests/test_website_crawler.py::test_crawl_page
+```
+
+### Code Formatting
+```bash
+poetry run autopep8 --in-place --recursive src/ tests/
+```
 
 ## Architecture
 
-This is a Python CLI tool using Poetry for dependency management. It crawls websites and generates CSV reports.
+### Core Components
 
-### Two-layer design
+**src/crawler.py** - CLI entry point
+- Argument parsing and logging configuration
+- Coordinates the crawl operation and output file generation
+- Filename format: `domain_YYYY-MM-DDThhmm.csv` (or `_external_links.csv` when using `-e`)
 
-- **`src/crawler.py`** — CLI entry point (registered as `crawler` script in pyproject.toml). Handles argument parsing, logging setup, and orchestrates the `WebsiteCrawler`. The `main()` function is the entry point.
-- **`src/website_crawler.py`** — Core crawling logic. The `WebsiteCrawler` class manages HTTP sessions, URL processing, recursive page traversal, and CSV output. Contains two crawl code paths:
-  - `_crawl_page()` — Primary internal crawl method used by `crawl()`, supports `pages_only` filtering
-  - `crawl_page()` — Legacy public method used by `check_external_links()`, does not support `pages_only`
+**src/website_crawler.py** - Core crawling logic
+- `WebsiteCrawler` class handles all crawling operations
+- Uses requests + BeautifulSoup4 for HTTP and HTML parsing
+- Maintains visited URLs set to prevent duplicate crawls
+- URL processing normalizes URLs by removing query params, fragments, and trailing slashes
 
-### Key patterns
+### Crawl Modes
 
-- HTTP mocking in tests uses the `responses` library (decorator-based: `@responses.activate`)
-- URL normalization strips query params, fragments, and trailing slashes
-- The crawler enforces a 1-second delay between requests (`time.sleep(1)`)
-- Custom exceptions: `URLProcessingError`, `CrawlingError` (defined but unused)
+**Non-recursive (default)**: Crawls only the base URL, does not follow internal links
+
+**Recursive (`-r`)**: Follows all internal links recursively until entire subdomain is crawled
+
+**Pages-only (`-p`)**: Skips non-page file types (PDFs, images, etc.). Page types defined in `PAGE_EXTENSIONS` constant include: html, php, asp, jsp, and several others
+
+**External links (`-e`)**: Collects external links found on pages (does not crawl them)
+
+### Key Implementation Details
+
+- URL normalization removes query parameters, fragments, and trailing slashes to prevent duplicate visits
+- 1-second delay between requests (`time.sleep(1)`) to be polite to servers
+- Custom User-Agent header identifies the crawler
+- Error handling captures HTTP errors and network exceptions, recording them in results with status code 0
+- Uses requests.Session for connection pooling across requests
+- `_crawl_page()` is the internal recursive method used by `crawl()` to visit pages
 
 ## Testing
 
-Tests are in `tests/` with `conftest.py` adding the project root to `sys.path`. Two test files mirror the two source modules:
-- `tests/test_crawler.py` — Tests CLI argument handling and logging setup using `unittest.mock`
-- `tests/test_website_crawler.py` — Tests crawling behavior using `responses` library for HTTP mocking
+Test suite uses pytest with responses library for HTTP mocking. Test coverage is ~99%. Tests cover:
+- URL processing and normalization
+- Recursive vs non-recursive crawling
+- External link collection
+- Error handling (HTTP errors, network errors, malformed HTML)
+- Pages-only filtering
+- CSV output generation
+
+## macOS Python Setup
+
+The project requires Python 3.9+. On macOS, use Homebrew Python instead of system Python to avoid Poetry virtual environment issues:
+
+```bash
+brew install python
+export PATH="/opt/homebrew/bin:$PATH"  # Apple Silicon
+# or export PATH="/usr/local/bin:$PATH"  # Intel
+```
