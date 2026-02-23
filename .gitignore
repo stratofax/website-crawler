@@ -37,6 +37,9 @@ poetry.lock
 *.swp
 *.swo
 
+# macOS
+.DS_Store
+
 # Project specific
 *.csv
 
